@@ -1,7 +1,9 @@
 function Enumerable(dataSource)
 {
+
     if(!dataSource) this.dataSource = [];
     else this.dataSource = dataSource;
+
 }
 
 Enumerable.From = function(dataSource) {
@@ -12,20 +14,55 @@ Enumerable.From = function(dataSource) {
     return enumerable;
 };
 
+Enumerable.Range = function(start, finish) {
+
+    var result = new Enumerable(new Array());
+
+    for(var i = start; i < finish; i++) {
+
+        result.dataSource.push(i);
+    }
+
+    return result;
+};
+
 Enumerable.prototype = {
+    _Partition: function(arr, start, finish) {
 
-    dataSource: undefined,
-    Range: function(start, finish) {
+        var pivot = arr[finish];
 
-        var result = new Enumerable(new Array());
+        var low = start;
 
         for(var i = start; i < finish; i++) {
 
-            result.dataSource.push(i);
+            if(arr[i] <= pivot) {
+
+                var temp = arr[i];
+                arr[i] = arr[low];
+                arr[low] = temp;
+                low++;
+
+            }
         }
 
-        return result;
+        var t = arr[low];
+        arr[low] = arr[finish];
+        arr[finish] = t;
+
+        return low;
     },
+    _QuickSort: function(arr, start, finish) {
+
+        if(start < finish) {
+
+            var partition = this._Partition(arr, start, finish);
+
+            this._QuickSort(arr, start, partition - 1);
+            this._QuickSort(arr, partition + 1, finish);
+        }
+        return arr;
+    },
+    dataSource: undefined,
     ForEach: function(callBack, start, end) {
 
         var keys = Object.keys(this.dataSource);
@@ -36,7 +73,7 @@ Enumerable.prototype = {
         for(var i = start; i < end; i++) {
 
             var key = keys[i];
-            callBack(this.dataSource[key]);
+            callBack(key, this.dataSource[key]);
         }
 
     },
@@ -44,7 +81,7 @@ Enumerable.prototype = {
 
         var result = new Enumerable();
 
-        var selectFunction = function(elem) {
+        var selectFunction = function(idx, elem) {
             var column = callBack(elem);
             result.dataSource.push(column);
         }
@@ -57,7 +94,7 @@ Enumerable.prototype = {
 
         var result = new Enumerable();
 
-        var selectManyFunction = function(elem) {
+        var selectManyFunction = function(idx, elem) {
             var column = callBack(elem);
             result.dataSource = result.dataSource.concat(column);
         }
@@ -71,7 +108,7 @@ Enumerable.prototype = {
 
         var result = new Enumerable();
 
-        var whereFunction = function(elem) {
+        var whereFunction = function(idx, elem) {
 
             if(callBack(elem)) result.dataSource.push(elem);
 
@@ -86,7 +123,7 @@ Enumerable.prototype = {
 
         var result = new Enumerable();
 
-        var SkipFunction = function(elem) {
+        var SkipFunction = function(idx, elem) {
             result.dataSource.push(elem);
         };
 
@@ -99,7 +136,7 @@ Enumerable.prototype = {
 
         var result = new Enumerable();
 
-        var TakeFunction = function(elem) {
+        var TakeFunction = function(idx, elem) {
             result.dataSource.push(elem);
         };
 
@@ -136,24 +173,81 @@ Enumerable.prototype = {
         return result;
 
     },
-    GroupBy: function(keySelector, elementSelector, resultSelector, comparer) {
+    GroupBy: function(keySelector, elementSelector, resultSelector, compareSelector) {
 
         var result = new Enumerable({});
 
-        var GroupByCallBack = function(elem) {
+        var GroupByCallBack = function(idx, elem) {
 
             var key = keySelector(elem);
 
+            if(compareSelector) key = compareSelector(key);
+
+            if(elementSelector) elem = elementSelector(elem);
+
             if(!result.dataSource[key]) result.dataSource[key] = [];
 
-            result.dataSource[key].push(elementSelector(elem));
+            result.dataSource[key].push(elem);
 
         };
 
         this.ForEach(GroupByCallBack);
-        result.dataSource = dataSource;
+
+        if(resultSelector) {
+
+            var dataSource = [];
+            var resultFunction = function(key, value) {
+
+                dataSource.push(resultSelector(key, new Enumerable(value)));
+                
+            };
+
+            result.ForEach(resultFunction);
+
+            result.dataSource = dataSource;
+        }
 
         return result;
+
+    },
+    OrderBy: function() {
+
+        var result = new Enumerable(this.dataSource);
+        var keysMap = new Enumerable({});
+        var args = arguments;
+
+        for(var i = 0; i < args.length; i++) {
+
+            var createKeysMapFunction = function(idx, elem) {
+
+                var callBack = args[i];
+                var key = callBack(elem);
+                
+                if(!keysMap.dataSource[key]) keysMap.dataSource[key] = [];
+                keysMap.dataSource[key].push(elem);
+
+            };
+
+            result.ForEach(createKeysMapFunction);
+
+            var keysList = Object.keys(keysMap.dataSource);
+            var sortedList = this._QuickSort(keysList, 0, keysList.length - 1);
+            console.log(sortedList);
+            //result.dataSource = 
+        }
+
+        return result;
+
+    },
+    OrderByDescending: function() {
+
+    },
+    Count: function() {
+
+        return Object.keys(this.dataSource).length;
+    },
+    ToDictionary: function(keySelector, elementSelector, compareSelector) {
+
 
     },
     ToArray: function() {
@@ -162,7 +256,7 @@ Enumerable.prototype = {
 
         var result = [];
 
-        var ToArrayFunction = function(elem) {
+        var ToArrayFunction = function(idx, elem) {
 
             result.push(elem);
         };
