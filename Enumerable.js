@@ -194,10 +194,6 @@ Enumerable.prototype = {
 
     },
     OrderBy: function(keySelector, comparer) {
-        
-        var result = new Enumerable();
-        var keyMap = {};
-        var keys = new Enumerable([]);
 
         var firstSelection = keySelector(this.First());
 
@@ -217,49 +213,27 @@ Enumerable.prototype = {
             };
         }
 
-        var keyCollector = function(idx, data) {
+        var sortFunction = function(a, b) {
 
-            var key = keySelector(data);
+            var keyA = keySelector(a);
+            var keyB = keySelector(b);
 
-            if(!keyMap[key]) {
-
-                keyMap[key] = [];
-                keys.dataSource.push(key);
-            }
-
-            keyMap[key].push(data);
+            return comparer(keyA, keyB);
 
         };
 
-        this.ForEach(keyCollector);
+        this.dataSource.sort(sortFunction);
 
-        keys.dataSource.sort(comparer);
 
-        var assembleResult = function(idx, key) {
+        this.comparators.push({ comparer: comparer, keySelector: keySelector });
 
-            var arr = keyMap[key];
-
-            for(var i = 0; i < arr.length; i++) {
-
-                result.dataSource.push(arr[i]);
-            } 
-        };
-
-        keys.ForEach(assembleResult);
-
-        result.comparators.push(comparer);
-
-        return result;
+        return this;
 
 
     },
     ThenBy: function(keySelector, comparer) {
 
-        var result = new Enumerable();
-        var keyMap = {};
-        var keys = new Enumerable([]);
         var that = this;
-
         var firstSelection = keySelector(this.First());
 
         if(!comparer && !isNaN(firstSelection)) {
@@ -269,20 +243,6 @@ Enumerable.prototype = {
                 return a - b;
             };
         }
-        var consequtiveComparisons = function(a, b) {
-
-            var currentComparerValue = (comparer)? comparer(a, b) : a >= b;
-
-            for(var i = 0; i < that.comparators.length; i++) {
-
-                var previousCompareFunctions = that.comparators[i];
-                var value = previousCompareFunctions(a, b);
-                if(!value) return value;
-            }
-
-            return currentComparerValue;
-
-        };
 
         if(!keySelector) {
 
@@ -292,40 +252,29 @@ Enumerable.prototype = {
             };
         }
 
-        var keyCollector = function(idx, data) {
+        this.comparators.push({ comparer: comparer, keySelector: keySelector });
 
-            var key = keySelector(data);
+        var consequtiveComparisons = function(a, b) {
 
-            if(!keyMap[key]) {
+            for(var i = 0; i < that.comparators.length; i++) {
 
-                keyMap[key] = [];
-                keys.dataSource.push(key);
+                var compareFunc = that.comparators[i].comparer;
+                var keySelector = that.comparators[i].keySelector;
+                var keyA = keySelector(a);
+                var keyB = keySelector(b);
+
+                var value = compareFunc(keyA, keyB);
+
+                if(value != 0) return value;
             }
 
-            keyMap[key].push(data);
+            return 0;
 
         };
 
-        this.ForEach(keyCollector);
+        this.dataSource.sort(consequtiveComparisons);
 
-        keys.dataSource.sort(consequtiveComparisons);
-
-        var assembleResult = function(idx, key) {
-
-            var arr = keyMap[key];
-
-            for(var i = 0; i < arr.length; i++) {
-
-                result.dataSource.push(arr[i]);
-            } 
-        };
-
-        keys.ForEach(assembleResult);
-
-        result.comparators = this.comparators;
-        result.comparators.push(comparer);
-
-        return result;
+        return this;
     },
     Count: function() {
 
