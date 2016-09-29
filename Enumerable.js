@@ -31,19 +31,44 @@ Enumerable.Range = function(start, finish) {
 Enumerable.prototype = {
     dataSource: undefined,
     comparators: undefined,
-    First: function() {
+    First: function(booleanCallback) {
+
+        if(!booleanCallback) {
+
+            booleanCallback = function(value) {
+                if(value)
+                    return true;
+                
+                throw  "Your data source is empty";
+            };
+        }
 
         var keys = Object.keys(this.dataSource);
-        return this.dataSource[keys[0]];
+
+        for(var i = 0; i < keys.length; i++) {
+
+            var value = (this.dataSource)? this.dataSource[keys[i]] : null;
+            if(booleanCallback(value)) return value;
+        }
+
+        throw "No value was found meeting the criteria";
     },
-    FirstOrDefault: function() {
+    FirstOrDefault: function(booleanCallback) {
 
-        if(!this.dataSource) return null;
+        if(!booleanCallback) {
+
+            booleanCallback = function(value) {
+                return true;
+            };
+        }
 
         var keys = Object.keys(this.dataSource);
-        if(keys.length == 0) return new Object();
 
-        return this.dataSource[keys[0]];
+        for(var i = 0; i < keys.length; i++) {
+
+            var value = (this.dataSource)? this.dataSource[keys[i]] : null;
+            if(booleanCallback(value)) return value;
+        }
         
     },
     ForEach: function(callBack, start, end) {
@@ -276,12 +301,76 @@ Enumerable.prototype = {
 
         return this;
     },
+    OrderByDescending: function(keySelector, comparer) {
+
+        var firstSelection = keySelector(this.First());
+
+        if(!comparer && !isNaN(firstSelection)) {
+
+            comparer = function(a, b) {
+
+                return b - a;
+            };
+        }
+        else if(!comparer) {
+
+            comparer = function(a, b) {
+
+                return b >= a;
+            };
+        }
+
+        if(!keySelector) {
+
+            keySelector = function(data) {
+
+                return data;
+            };
+        }
+
+        return this.OrderBy(keySelector, comparer);
+
+    },
+    ThenByDescending: function(keySelector, comparer) {
+
+        var firstSelection = keySelector(this.First());
+
+        if(!comparer && !isNaN(firstSelection)) {
+
+            comparer = function(a, b) {
+
+                return b - a;
+            };
+        }
+        else if(!comparer) {
+
+            comparer = function(a, b) {
+
+                return b >= a;
+            };
+        }
+
+        if(!keySelector) {
+
+            keySelector = function(data) {
+
+                return data;
+            };
+        }
+
+        return this.ThenBy(keySelector, comparer);
+
+    },
+    Join: function(inner, outerKeySelector, innerKeySelector, resultSelector) {
+
+    },
+    GroupJoin: function(inner, outerKeySelector, innerKeySelector, resultSelector, compareSelector) {
+
+    },
     Count: function() {
 
         if(!this.dataSource) throw "The enumerable is empty";
         return Object.keys(this.dataSource).length;
-    },
-    ToDictionary: function(keySelector, elementSelector, compareSelector) {
     },
     ToArray: function() {
 
