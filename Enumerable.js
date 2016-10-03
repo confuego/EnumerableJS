@@ -363,8 +363,38 @@ Enumerable.prototype = {
     },
     Join: function(inner, outerKeySelector, innerKeySelector, resultSelector) {
 
+        var result = new Enumerable();
+        var comparer = {};
+        
+        if(!inner instanceof Enumerable) inner  = new Enumerable(inner);
+
+        var innerForEach = function(elem) {
+
+            var innerKey = innerKeySelector(elem);
+            comparer[innerKey] = elem;
+        };
+
+        inner.ForEach(innerForEach);
+
+        var outerForEach = function(elem) {
+
+            var outerKey = outerKeySelector(elem);
+            var innerElem = comparer[outerKey];
+
+            if(innerElem) {
+
+                result.dataSource.push(resultSelector(innerElem, elem));
+            }
+        }
+
+        this.ForEach(outerForEach);
+
+        return result;
+        
     },
-    GroupJoin: function(inner, outerKeySelector, innerKeySelector, resultSelector, compareSelector) {
+    GroupJoin: function(inner, outerKeySelector, innerKeySelector, resultSelector) {
+
+
 
     },
     Count: function() {
