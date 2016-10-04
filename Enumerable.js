@@ -361,29 +361,35 @@ Enumerable.prototype = {
         return this.ThenBy(keySelector, comparer);
 
     },
-    Join: function(inner, outerKeySelector, innerKeySelector, resultSelector) {
+    Join: function(inner, outerKeySelector, innerKeySelector, resultSelector, compareSelector) {
 
         var result = new Enumerable();
         var comparer = {};
         
-        if(!inner instanceof Enumerable) inner  = new Enumerable(inner);
+        if(inner instanceof Enumerable == false) inner  = new Enumerable(inner);
 
-        var innerForEach = function(elem) {
+        var innerForEach = function(idx, elem) {
 
             var innerKey = innerKeySelector(elem);
-            comparer[innerKey] = elem;
+
+            if(!comparer[innerKey]) comparer[innerKey] = [];
+
+            comparer[innerKey].push(elem);
         };
 
         inner.ForEach(innerForEach);
 
-        var outerForEach = function(elem) {
+        var outerForEach = function(idx, elem) {
 
             var outerKey = outerKeySelector(elem);
-            var innerElem = comparer[outerKey];
+            var innerElemList = comparer[outerKey];
 
-            if(innerElem) {
+            if(innerElemList) {
 
-                result.dataSource.push(resultSelector(innerElem, elem));
+                for(var i = 0; i < innerElemList.length; i++) {
+
+                    result.dataSource.push(resultSelector(elem, innerElemList[i]));
+                }
             }
         }
 
@@ -392,8 +398,38 @@ Enumerable.prototype = {
         return result;
         
     },
-    GroupJoin: function(inner, outerKeySelector, innerKeySelector, resultSelector) {
+    GroupJoin: function(inner, outerKeySelector, innerKeySelector, resultSelector, compareSelector) {
 
+        var result = new Enumerable();
+        var comparer = {};
+        
+        if(inner instanceof Enumerable == false) inner = new Enumerable(inner);
+
+        var innerForEach = function(idx, elem) {
+
+            var innerKey = innerKeySelector(elem);
+
+            if(!comparer[innerKey]) comparer[innerKey] = [];
+
+            comparer[innerKey].push(elem);
+        };
+
+        inner.ForEach(innerForEach);
+
+        var outerForEach = function(idx, elem) {
+
+            var outerKey = outerKeySelector(elem);
+            var innerElemList = comparer[outerKey];
+
+            if(innerElemList) {
+
+                result.dataSource.push(resultSelector(elem, innerElemList));
+            }
+        }
+
+        this.ForEach(outerForEach);
+
+        return result;
 
 
     },
